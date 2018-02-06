@@ -9,6 +9,9 @@ class Validator(object):
     def validate(self, form, value):
         raise NotImplementedError()
 
+    def populate(self):
+        pass
+
     def raise_error(self, key, value):
         raise e.ValidationError(key, value, self)
 
