@@ -19,7 +19,6 @@ class CustomSelectValidator(sb.v.Validator):
             "options": self._options,
             "name": self.name
         }
-        return self._options
 
     def validate(self, form, key, value):
         if value not in self._options:
