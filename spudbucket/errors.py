@@ -20,3 +20,15 @@ class ValidationError(FormError):
     def __str__(self):
         return "%r: %r failed test for %r" % (
             self._key, self._value, self._validator)
+
+
+class InvalidSessionError(FormError):
+    """
+    This could be useful for if a session times out in the middle of
+    something. An error handler could be caught and automatically redirect
+    users to a login page if an invalid session is detected. This is an
+    empty container error with no functionality.
+    """
+
+    def __str__(self):
+        return "Invalid or missing Flask session for request"
