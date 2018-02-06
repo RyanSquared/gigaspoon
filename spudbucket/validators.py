@@ -82,7 +82,9 @@ class CSRFValidator(Validator):
             flask.session["_csrf_token"] = str(base64.b64encode(package))
         return {
             "name": self.name,
-            "csrf_token": flask.session["_csrf_token"]
+            "csrf_token": flask.session["_csrf_token"],
+            "csrf_tag": '<input type="hidden" name="%s" value="%s" />' % (
+                self.name, flask.session["_csrf_token"])
         }
 
     # Verify that the CSRF token passed is the same as in the session
