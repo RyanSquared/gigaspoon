@@ -14,6 +14,13 @@ class CustomSelectValidator(sb.v.Validator):
     def __repr__(self):
         return "%r %r" % (type(self), self._options)
 
+    def populate(self):
+        return {
+            "options": self._options,
+            "name": self.name
+        }
+        return self._options
+
     def validate(self, form, key, value):
         if value not in self._options:
             self.raise_error(key, value)
@@ -23,11 +30,11 @@ users = ["Fred", "George"]
 html = """
 <!DOCTYPE HTML>
 {% for message in get_flashed_messages() -%}
-{{ message }}
+<pre>{{ message }}</pre>
 {%- endfor %}
 <form method="POST">
-    <select required name="user">
-        {% for user in users -%}
+    <select required name="{{ g.user_validator.name }}">
+        {% for user in g.user_validator.options -%}
         <option value="{{ user }}">{{ user }}</option>
         {%- endfor %}
         <option value="break!">Bad input!</option>
@@ -47,7 +54,7 @@ def index(form):
         flask.flash(repr(form))
         return flask.redirect(flask.url_for('index'))
     else:
-        return flask.render_template_string(html, users=users)
+        return flask.render_template_string(html)
 
 
 @app.errorhandler(sb.e.FormError)
