@@ -3,18 +3,23 @@ import flask
 
 app = flask.Flask(__name__)
 
+# How to Use:
+#
+# `curl -F example=helloworld localhost:5000`
+# `curl -F example=bad1input localhost:5000`
+# `curl localhost:5000`
+
 
 @app.route("/", methods=["GET", "POST"])
 @sb.set_methods("POST")
-@sb.validator(sb.v.RegexValidator("new", "hi"))
-@sb.validator(sb.v.RegexValidator("asdf", "[A-Za-z]+"))
+@sb.validator(sb.v.RegexValidator("example", "[A-Za-z]+"))
 @sb.base
 def index(form):
     if form.is_form_mode():
         # Method is POST and form fields are valid
         return repr(form)
     else:
-        return "hi!"
+        return 'hi!'
 
 
 @app.errorhandler(sb.e.FormError)
