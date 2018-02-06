@@ -39,7 +39,7 @@ def get_form(methods=("POST",)):
 
 
 # Prototype decorator for validating incoming requests
-def validator_prototype(func, validator_instance, *args, **kwargs):
+def _validator_prototype(func, validator_instance, *args, **kwargs):
     assert isinstance(validator_instance, v.Validator)
     name = validator_instance.name
 
@@ -62,12 +62,22 @@ def validator_prototype(func, validator_instance, *args, **kwargs):
 
 # Validate incoming Flask requests using a Validator
 def validator(validator_instance):
+    """
+    Validate incoming Flask requests using a Validator.
+
+    :usage:
+        @app.route("/")
+        @sb.validator(sb.v.CSRFValidator())
+        def index():
+            # Your code here
+            pass
+    """
     return functools.partial(
-        validator_prototype, validator_instance=validator_instance)
+        _validator_prototype, validator_instance=validator_instance)
 
 
 # Prototype decorator for validating a form on certain HTTP methods
-def set_methods_prototype(func, methods):
+def _set_methods_prototype(func, methods):
     @functools.wraps(func)
     def setup_methods(*args, **kwargs):
         get_form(methods)
@@ -77,7 +87,7 @@ def set_methods_prototype(func, methods):
 
 # Set the HTTP methods that will trigger validation
 def set_methods(*methods):
-    return functools.partial(set_methods_prototype, methods=methods)
+    return functools.partial(_set_methods_prototype, methods=methods)
 
 
 # Automatically pass a `form` to the decorated function
