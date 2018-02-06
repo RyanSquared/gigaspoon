@@ -53,6 +53,9 @@ def validator_prototype(func, validator_instance, *args, **kwargs):
             item = r_form.get(name)
             validator_instance.validate(form, name, item)
             form[name] = item
+        if hasattr(validator_instance, "populate"):
+            data_name = name + "_validator"
+            setattr(flask.g, data_name, validator_instance.populate())
         return func(*args, **kwargs)
     return handle_func
 
