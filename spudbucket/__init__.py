@@ -5,7 +5,18 @@ from . import errors as e
 
 
 class Form(dict):
-    # Create a Form, triggered "on" when the Flask request is in `methods`
+    """Dictionary with extra utilities for checking Flask form status
+
+    :usage:
+        form = Form("POST", "PUT")
+        form["hello"] = "example message"
+        if form.is_form_mode():
+            print(form["hello"])
+        else:
+            print("Use a POST or PUT request!")
+    """
+
+    # Create a Form, triggered "on" when Flask request is in `methods`
     def __init__(self, methods):
         super(Form, self).__init__()
         self._methods = methods
@@ -17,7 +28,7 @@ class Form(dict):
         return False
 
 
-# Check or preload a form into a Flask session.
+# Check or preload a form into a Flask request variable
 def get_form(methods=("POST",)):
     try:
         form = flask.g.form
@@ -46,7 +57,7 @@ def validator_prototype(func, validator_instance, *args, **kwargs):
     return handle_func
 
 
-# Decorator factory
+# Validate incoming Flask requests using a Validator
 def validator(validator_instance):
     return functools.partial(
         validator_prototype, validator_instance=validator_instance)
@@ -61,12 +72,12 @@ def set_methods_prototype(func, methods):
     return setup_methods
 
 
-# Decorator factory
+# Set the HTTP methods that will trigger validation
 def set_methods(*methods):
     return functools.partial(set_methods_prototype, methods=methods)
 
 
-# Decorator for passing a form to the view function
+# Automatically pass a `form` to the decorated function
 def base(func):
     @functools.wraps(func)
     def setup_form(*args, **kwargs):
