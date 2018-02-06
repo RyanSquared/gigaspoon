@@ -32,6 +32,8 @@ html = """
 <pre>{{ message }}</pre>
 {%- endfor %}
 <form method="POST">
+    <input type="hidden" name="{{ g.csrf_validator.name }}"
+        value="{{ g.csrf_validator.csrf_token }}" />
     <select required name="{{ g.user_validator.name }}">
         {% for user in g.user_validator.options -%}
         <option value="{{ user }}">{{ user }}</option>
@@ -46,6 +48,7 @@ html = """
 @app.route("/", methods=["GET", "POST"])
 @sb.set_methods("POST")
 @sb.validator(CustomSelectValidator("user", users))
+@sb.validator(sb.v.CSRFValidator("csrf"))
 @sb.base
 def index(form):
     if form.is_form_mode():
