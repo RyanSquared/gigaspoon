@@ -15,7 +15,6 @@ def index(form):
         return repr(form)
     else:
         return "hi!"
-        # return flask.render_template("index.html")
 
 
 @app.errorhandler(sb.e.FormError)
