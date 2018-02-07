@@ -1,8 +1,13 @@
 # Spud Bucket - A library for handling Flask forms.
 
-This is a super simple library I wrote to help handle Flask forms. It's
-currently very unstable so I wouldn't recommend using it as things can and
+This is a super simple library I wrote to help handle validating Flask forms.
+It's currently very unstable so I wouldn't recommend using it as things can and
 probably will change over time.
+
+This framework is designed to assist with **validating** input, while also
+offering options to help with creating forms. Unlike other frameworks, the
+priority is towards validation, leaving the creation and design of forms to
+the developer.
 
 ## Why?
 
@@ -14,6 +19,11 @@ validate their forms. In the future, there might also be some helpful utilities
 set in `flask.g` to help with autogenerating forms based on values from a
 `select`, setting types, etc. that can be used in Jinja2 templates (but will
 not be required).
+
+Spud Bucket is less "featureful" than other form-creation frameworks, so that
+the developers can have more power over the forms. Instead of automatically
+generating tags to be output, the framework urges you to write your own
+templates, assisted by the framework.
 
 ## How?
 
