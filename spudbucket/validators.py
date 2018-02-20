@@ -78,8 +78,8 @@ class CSRFValidator(Validator):
     # Generate a CSRF token from random bytes, and store in a session
     def populate(self):
         if flask.session.get("_csrf_token") is None:
-            package = os.urandom(24)
-            flask.session["_csrf_token"] = str(base64.b64encode(package))
+            token = base64.b64encode(os.urandom(24))
+            flask.session["_csrf_token"] = token.decode('ascii')
         return {
             "name": self.name,
             "csrf_token": flask.session["_csrf_token"],
