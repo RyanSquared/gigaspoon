@@ -1,6 +1,11 @@
+"""
+This module provides utility validators to avoid rewriting validators that
+are not usecase specific.
+"""
 import base64
 import os
 import re
+import socket
 
 import flask
 
@@ -15,17 +20,95 @@ class Validator(object):
     example.
     """
 
-    def __init__(self):
+    def validate(self, form, key, value):  # pylint: disable=C0111
         raise NotImplementedError()
 
-    def validate(self, form, value):
-        raise NotImplementedError()
-
-    def populate(self):
+    def populate(self):  # pylint: disable=C0111
         pass
 
-    def raise_error(self, key, value):
-        raise e.ValidationError(key, value, self)
+    def raise_error(self, key, value, **kwargs):  # pylint: disable=C0111
+        raise e.ValidationError(key, value, self, **kwargs)
+
+
+class EmailValidator(Validator):
+    """
+    Checks whether an input matches a potential email. Other methods
+    should be used for advanced verification. An optional `domain`
+    argument can be passed to the constructor, which will check
+    whether the email is in the domain.
+
+    :usage:
+    @app.route("/")
+    @sb.validator(sb.v.EmailValidator("email", domain="hashbang.sh"))
+    @sb.base
+    def index(form):
+        if form.is_form_mode():
+            perform_advanced_validation(form["email"])
+            do_thing(form)
+            return flask.redirect(flask.url_for("index"))
+        return flask.render_template("index.html")
+    """
+
+    # Store the domain if one is passed
+    def __init__(self, name, domain=None):
+        self.name = name
+        self._domain = domain
+
+    # Check if input data is a semi-valid email matching the domain
+    def validate(self, form, key, value):
+        first, _, last = value.rpartition("@")
+        if "@" in first:
+            self.raise_error(key, value, message="invalid email")
+        elif self._domain is not None and last != self._domain:
+            self.raise_error(
+                key, value,
+                message="invalid domain (%r)" % self._domain)
+
+
+class IPAddressValidator(Validator):
+    """
+    Checks whether an input matches a (default) IPv4 or IPv6 address;
+    either IPv4, IPv6, or both can be chosen from. The `address_type`
+    field should be assigned to an array containing the strings "ipv4",
+    "ipv6", or both depending on which are considered valid.
+
+    :usage:
+    @app.route("/")
+    @sb.validator(sb.v.IPAddressValidator("addr"))
+    @sb.base
+    def index(form):
+        if form.is_form_mode():
+            print(form["addr"])
+            return flask.redirect(flask.url_for("index"))
+        return flask.render_template_string(
+            "Address families: {{ g.addr_validator.address_type }}")
+    """
+
+    def __init__(self, name, address_type=["ipv4"]):  # pylint: disable=W0102
+        self.name = name
+        self._type = address_type
+
+    def validate(self, form, key, value):
+        dirty = True
+        if "ipv4" in self._type:
+            try:
+                socket.inet_pton(socket.AF_INET, value)
+            except socket.error:
+                pass
+            else:
+                dirty = False
+        if "ipv6" in self._type:
+            try:
+                socket.inet_pton(socket.AF_INET6, value)
+            except socket.error:
+                pass
+            else:
+                dirty = False
+        if dirty:
+            self.raise_error(key, value)
+
+    def populate(self):
+        return {"address_type": self._type}
 
 
 class RegexValidator(Validator):
@@ -41,8 +124,7 @@ class RegexValidator(Validator):
             if form.is_form_mode():
                 print(form["count"])
                 return flask.redirect(flask.url_for("index"))
-            else
-                return flask.render_template("index.html")
+            return flask.render_template("index.html")
     """
 
     # Compiles and stores a pattern

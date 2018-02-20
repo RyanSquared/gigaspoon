@@ -1,6 +1,7 @@
-import spudbucket as sb
-import flask
 import os
+
+import flask
+import spudbucket as sb
 
 app = flask.Flask(__name__)
 app.secret_key = os.urandom(24)
@@ -25,7 +26,6 @@ class CustomSelectValidator(sb.v.Validator):
             self.raise_error(key, value)
 
 
-users = ["Fred", "George"]
 html = """
 <!DOCTYPE HTML>
 {% for message in get_flashed_messages() -%}
@@ -48,7 +48,7 @@ html = """
 
 @app.route("/", methods=["GET", "POST"])
 @sb.set_methods("POST")
-@sb.validator(CustomSelectValidator("user", users))
+@sb.validator(CustomSelectValidator("user", ["Fred", "George"]))
 @sb.validator(sb.v.CSRFValidator())
 @sb.base
 def index(form):
@@ -56,8 +56,7 @@ def index(form):
         # Method is POST and form fields are valid
         flask.flash(repr(form))
         return flask.redirect(flask.url_for('index'))
-    else:
-        return flask.render_template_string(html)
+    return flask.render_template_string(html)
 
 
 @app.errorhandler(sb.e.FormError)
