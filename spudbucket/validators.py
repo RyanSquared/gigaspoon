@@ -54,10 +54,13 @@ class EmailValidator(Validator):
         self.name = name
         self._domain = domain
 
+    def populate(self):
+        return {"domain": self._domain}
+
     # Check if input data is a semi-valid email matching the domain
     def validate(self, form, key, value):
         first, _, last = value.rpartition("@")
-        if "@" in first:
+        if "@" in first or not first or not last:
             self.raise_error(key, value, message="invalid email")
         elif self._domain is not None and last != self._domain:
             self.raise_error(
