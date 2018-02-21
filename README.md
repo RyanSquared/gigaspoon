@@ -1,4 +1,5 @@
 # Spud Bucket - A library for handling Flask forms.
+[![Build Status](https://travis-ci.org/RyanSquared/spudbucket.svg?branch=master)](https://travis-ci.org/RyanSquared/spudbucket) [![License](https://img.shields.io/github/license/RyanSquared/spudbucket.svg?maxAge=2592000)](https://github.com/RyanSquared/spudbucket/blob/master/LICENSE.md) ![Fanciness](https://img.shields.io/badge/fancy-totally-brightgreen.svg)
 
 This is a super simple library I wrote to help handle validating Flask forms.
 It's currently very unstable so I wouldn't recommend using it as things can and
