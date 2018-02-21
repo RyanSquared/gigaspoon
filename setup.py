@@ -7,5 +7,5 @@ setup(
     packages=['spudbucket'],
     install_requires=['flask'],
     extras_require={
-        "dev": ["pytest"]
+        "dev": ["pytest", "pytest-cov"]
     })
