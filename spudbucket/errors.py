@@ -15,11 +15,11 @@ class FormKeyError(FormError):
     """
 
     def __init__(self, key, form):
-        self._key = key
+        self.key = key
         self._form = form
 
     def __str__(self):
-        return "Expected key %r for form %r" % (self._key, self._form)
+        return "Expected key %r for form %r" % (self.key, self._form)
 
 
 class ValidationError(FormError):
@@ -31,18 +31,18 @@ class ValidationError(FormError):
     """
 
     def __init__(self, key, value, validator, message=None):
-        self._key = key
-        self._value = value
+        self.key = key
+        self.value = value
+        self.message = message
         self._validator = validator
-        self._message = message
 
     def __str__(self):
-        if self._message is not None:
-            post = " (%r)" % self._message
+        if self.message is not None:
+            post = " (%r)" % self.message
         else:
             post = ""
         return "%r: %r failed test for %r%s" % (
-            self._key, self._value, self._validator, post)
+            self.key, self.value, self._validator, post)
 
 
 class InvalidSessionError(FormError):
