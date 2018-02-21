@@ -35,7 +35,8 @@ def test_email(app):
                          ("/with_domain", domain_validator)]:
             result = c.get(endpoint[0])
             items = endpoint[1].populate()
-            assert items == json.loads(result.data)
+            content = result.data.decode('ascii')
+            assert items == json.loads(content)
             for item in ["domain"]:
                 assert item in items
 
@@ -81,7 +82,8 @@ def test_csrf(app):
         result = c.get("/")
         assert flask.session["_csrf_token"] == instance["token"]
         items = validator.populate()
-        assert items == json.loads(result.data)
+        content = result.data.decode('ascii')
+        assert items == json.loads(content)
         for item in ['csrf_token', 'csrf_tag']:
             assert item in items
 
