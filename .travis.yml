@@ -4,12 +4,15 @@ python:
  - "3.4"
  - "3.5"
  - "3.6"
+
 env:
  - FLASK_VERSION=0.10
  - FLASK_VERSION=0.11
  - FLASK_VERSION=0.12
+
 install:
  - pip install -q flask==$FLASK_VERSION
  - pip install -q .[dev]
+
 script:
  - python -m py.test --cov-report term --cov=spudbucket -q
