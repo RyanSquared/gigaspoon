@@ -130,22 +130,26 @@ class IPAddressValidator(Validator):
 
     def validate(self, form, key, value):
         dirty = True
+        error = None
         if "ipv4" in self._type:
             try:
                 socket.inet_pton(socket.AF_INET, value)
-            except socket.error:
-                pass
+            except socket.error as err:
+                error = err
             else:
                 dirty = False
         if "ipv6" in self._type:
             try:
                 socket.inet_pton(socket.AF_INET6, value)
-            except socket.error:
-                pass
+            except socket.error as err:
+                # Will still be "dirty" if IPv4 didn't match, meaning this is
+                # also a valid error
+                if dirty:
+                    error = err
             else:
                 dirty = False
         if dirty:
-            self.raise_error(key, value)
+            self.raise_error(key, value, exception=error)
 
     def populate(self):
         return {"address_type": self._type}
@@ -183,4 +187,4 @@ class RegexValidator(Validator):
     # Check if input data matches the pattern; otherwise, raise errors
     def validate(self, form, key, value):
         if not self.pattern.match(value):
-            self.raise_error(key, value)
+            self.raise_error(key, value, message=self.pattern)
