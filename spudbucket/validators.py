@@ -30,6 +30,43 @@ class Validator(object):
         raise e.ValidationError(key, value, self, **kwargs)
 
 
+class CSRFValidator(Validator):
+    """
+    Create a CSRF token and ensure that the token exists (and matches that
+    of the form) when serving and processing forms.
+
+    :usage:
+        @app.route("/")
+        @sb.validator(sb.v.CSRFValidator())
+        def index():
+            # Your code here
+            pass
+    """
+
+    def __init__(self, name="csrf_token"):
+        self.name = name
+
+    # Generate a CSRF token from random bytes, and store in a session
+    def populate(self):
+        if flask.session.get("_csrf_token") is None:
+            token = base64.b64encode(os.urandom(24))
+            flask.session["_csrf_token"] = token.decode('ascii')
+        return {
+            "name": self.name,
+            "csrf_token": flask.session["_csrf_token"],
+            "csrf_tag": '<input type="hidden" name="%s" value="%s" />' % (
+                self.name, flask.session["_csrf_token"])
+        }
+
+    # Verify that the CSRF token passed is the same as in the session
+    def validate(self, form, key, value):
+        token = flask.session.get("_csrf_token")
+        if token is None:
+            raise e.InvalidSessionError()
+        elif value != token:
+            self.raise_error(key, value)
+
+
 class EmailValidator(Validator):
     """
     Checks whether an input matches a potential email. Other methods
@@ -117,7 +154,12 @@ class IPAddressValidator(Validator):
 class RegexValidator(Validator):
     """
     Validate input data based on a raw, uncompiled regex pattern. To match
-    an exact string, text should be anchored at the end using `$`.
+    an exact string, text should be anchored at the beginning and end by using
+    `^` and `$` respectively.
+
+    It is suggested to use the "most common" subset of regex to ensure that
+    the framework displaying your views (most likely HTML) can properly use
+    the regex.
 
     :usage:
         @app.route("/")
@@ -133,49 +175,12 @@ class RegexValidator(Validator):
     # Compiles and stores a pattern
     def __init__(self, name, pattern):
         self.name = name
-        self._pattern = re.compile(pattern)
+        self.pattern = re.compile(pattern)
 
-    def __repr__(self):
-        return "%r <%r>" % (type(self), self._pattern.pattern)
+    def populate(self):
+        return {"pattern": self.pattern.pattern}
 
     # Check if input data matches the pattern; otherwise, raise errors
     def validate(self, form, key, value):
-        if not self._pattern.match(value):
-            self.raise_error(key, value)
-
-
-class CSRFValidator(Validator):
-    """
-    Create a CSRF token and ensure that the token exists (and matches that
-    of the form) when serving and processing forms.
-
-    :usage:
-        @app.route("/")
-        @sb.validator(sb.v.CSRFValidator())
-        def index():
-            # Your code here
-            pass
-    """
-
-    def __init__(self, name="csrf_token"):
-        self.name = name
-
-    # Generate a CSRF token from random bytes, and store in a session
-    def populate(self):
-        if flask.session.get("_csrf_token") is None:
-            token = base64.b64encode(os.urandom(24))
-            flask.session["_csrf_token"] = token.decode('ascii')
-        return {
-            "name": self.name,
-            "csrf_token": flask.session["_csrf_token"],
-            "csrf_tag": '<input type="hidden" name="%s" value="%s" />' % (
-                self.name, flask.session["_csrf_token"])
-        }
-
-    # Verify that the CSRF token passed is the same as in the session
-    def validate(self, form, key, value):
-        token = flask.session.get("_csrf_token")
-        if token is None:
-            raise e.InvalidSessionError()
-        elif value != token:
+        if not self.pattern.match(value):
             self.raise_error(key, value)
