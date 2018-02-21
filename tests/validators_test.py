@@ -9,6 +9,46 @@ import spudbucket as sb
 pytestmark = pytest.mark.usefixtures("app")
 
 
+def test_csrf(app):
+    instance = {}
+    validator = sb.v.CSRFValidator()
+
+    @app.route("/", methods=["GET", "POST"])
+    @sb.validator(validator)
+    @sb.base
+    def index(form):
+        if form.is_form_mode():
+            return "success"
+        instance["token"] = flask.session["_csrf_token"]
+        return flask.jsonify(flask.g.csrf_token_validator)
+
+    with app.test_client() as c:
+        # Check if sessions are required
+        with pytest.raises(sb.e.InvalidSessionError):
+            c.post("/", data={"csrf_token": ""})
+
+        # Make sure data populates correctly
+        result = c.get("/")
+        assert flask.session["_csrf_token"] == instance["token"]
+        items = validator.populate()
+        content = result.data.decode('ascii')
+        assert items == json.loads(content)
+        for item in ['csrf_token', 'csrf_tag']:
+            assert item in items
+
+        # Get the session value back when POSTing
+        result = c.post("/", data={"csrf_token": flask.session["_csrf_token"]})
+        assert result.data == b"success"
+
+        # Raise a validation error when a value is invalid
+        with pytest.raises(sb.e.ValidationError):
+            c.post("/", data={"csrf_token": instance["token"][::-1]})
+
+        # Raises a validation error when no value is provided
+        with pytest.raises(sb.e.FormKeyError):
+            c.post("/")
+
+
 def test_email(app):
     no_domain_validator = sb.v.EmailValidator("email")
     domain_validator = sb.v.EmailValidator("email", domain="example.com")
@@ -58,43 +98,3 @@ def test_email(app):
             with pytest.raises(sb.e.ValidationError):
                 result = c.post("/with_domain",
                                 data={"email": email})
-
-
-def test_csrf(app):
-    instance = {}
-    validator = sb.v.CSRFValidator()
-
-    @app.route("/", methods=["GET", "POST"])
-    @sb.validator(validator)
-    @sb.base
-    def index(form):
-        if form.is_form_mode():
-            return "success"
-        instance["token"] = flask.session["_csrf_token"]
-        return flask.jsonify(flask.g.csrf_token_validator)
-
-    with app.test_client() as c:
-        # Check if sessions are required
-        with pytest.raises(sb.e.InvalidSessionError):
-            c.post("/", data={"csrf_token": ""})
-
-        # Make sure data populates correctly
-        result = c.get("/")
-        assert flask.session["_csrf_token"] == instance["token"]
-        items = validator.populate()
-        content = result.data.decode('ascii')
-        assert items == json.loads(content)
-        for item in ['csrf_token', 'csrf_tag']:
-            assert item in items
-
-        # Get the session value back when POSTing
-        result = c.post("/", data={"csrf_token": flask.session["_csrf_token"]})
-        assert result.data == b"success"
-
-        # Raise a validation error when a value is invalid
-        with pytest.raises(sb.e.ValidationError):
-            c.post("/", data={"csrf_token": instance["token"][::-1]})
-
-        # Raises a validation error when no value is provided
-        with pytest.raises(sb.e.FormKeyError):
-            c.post("/")
