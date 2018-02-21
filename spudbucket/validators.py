@@ -112,6 +112,9 @@ class IPAddressValidator(Validator):
     field should be assigned to an array containing the strings "ipv4",
     "ipv6", or both depending on which are considered valid.
 
+    Depending on which system you use, IPv4 may or may not be allowed to use
+    leading zeroes. Take this into consideration when writing tests.
+
     :usage:
     @app.route("/")
     @sb.validator(sb.v.IPAddressValidator("addr"))
