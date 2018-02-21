@@ -179,7 +179,7 @@ def test_ipaddr(app):
             assert err.value.value == ip
 
         # Test valid IPv4
-        for ip in ["127.127.127.127", "1.1.1.1", "001.001.001.001"]:
+        for ip in ["127.127.127.127", "1.1.1.1"]:
             result = c.post("/ipv4", data={"ipv4": ip})
             assert result.data == b"success"
 
