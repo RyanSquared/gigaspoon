@@ -12,6 +12,4 @@ install:
  - pip install -q flask==$FLASK_VERSION
  - pip install -q .[dev]
 script:
- - flask --version
- - python --version
- - py.test --cov-report term --cov=spudbucket -q
+ - python -m py.test --cov-report term --cov=spudbucket -q
