@@ -30,17 +30,19 @@ class ValidationError(FormError):
     invalid data.
     """
 
-    def __init__(self, key, value, validator, message=None):
+    def __init__(self, key, value, validator, message=None, exception=None):
         self.key = key
         self.value = value
         self.message = message
+        self.exception = exception
         self._validator = validator
 
     def __str__(self):
+        post = ""
         if self.message is not None:
-            post = " (%r)" % self.message
-        else:
-            post = ""
+            post += " (%r)" % self.message
+        if self.exception is not None:
+            post += " <%r>" % self.exception
         return "%r: %r failed test for %r%s" % (
             self.key, self.value, self._validator, post)
 
