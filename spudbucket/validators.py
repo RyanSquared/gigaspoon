@@ -105,6 +105,31 @@ class EmailValidator(Validator):
                 message="invalid domain (%r)" % self._domain)
 
 
+class ExistsValidator(Validator):
+    """
+    Checks whether a value exists or not.
+
+    :usage:
+    @app.route("/")
+    @sb.validator(sb.v.ExistsValidator("username"))
+    @sb.base
+    def index(form):
+        if form.is_form_mode():
+            perform_advanced_validation(form["username"])
+            do_thing(form)
+            return flask.redirect(flask.url_for("index"))
+        return flask.render_template("index.html")
+    """
+
+    # Store the domain if one is passed
+    def __init__(self, name):
+        self.name = name
+
+    # Check if the value exists
+    def validate(self, form, key, value):
+        pass
+
+
 class IPAddressValidator(Validator):
     """
     Checks whether an input matches a (default) IPv4 or IPv6 address;
@@ -156,6 +181,47 @@ class IPAddressValidator(Validator):
 
     def populate(self):
         return {"address_type": self._type}
+
+
+class LengthValidator(Validator):
+    """
+    Checks whether an input has a certain number of characters.
+
+    :usage:
+    @app.route("/")
+    @sb.validator(sb.v.LengthValidator("username", min=6, max=30))
+    @sb.base
+    def index(form):
+        if form.is_form_mode():
+            perform_advanced_validation(form["username"])
+            do_thing(form)
+            return flask.redirect(flask.url_for("index"))
+        return flask.render_template("index.html")
+    """
+
+    # Store the domain if one is passed
+    def __init__(self, name, min=None, max=None):
+        self.name = name
+        self._min = min
+        self._max = max
+
+    def populate(self):
+        return {"min": self._min, "max": self._max}
+
+    # Check if input data is a semi-valid email matching the domain
+    def validate(self, form, key, value):
+        length = len(value)
+        msg = "value too %s (%s %s %s)"
+        if self._min is not None:
+            if length < self._min:
+                self.raise_error(
+                    key, value,
+                    message=msg % ("short", length, "<", self._min))
+        if self._max is not None:
+            if length > self._max:
+                self.raise_error(
+                    key, value,
+                    message=msg % ("long", length, ">", self._max))
 
 
 class RegexValidator(Validator):
