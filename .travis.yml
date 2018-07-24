@@ -9,6 +9,7 @@ env:
  - FLASK_VERSION=0.10
  - FLASK_VERSION=0.11
  - FLASK_VERSION=0.12
+ - FLASK_VERSION=1.0
 
 install:
  - pip install -q flask==$FLASK_VERSION
