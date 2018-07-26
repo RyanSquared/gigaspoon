@@ -257,3 +257,22 @@ class RegexValidator(Validator):
     def validate(self, form, key, value):
         if not self.pattern.match(value):
             self.raise_error(key, value, message=self.pattern)
+
+
+class SelectValidator(Validator):
+    def __init__(self, name, options):
+        self.name = name
+        self._options = set(options)
+
+    def __repr__(self):
+        return "%r %r" % (type(self), self._options)
+
+    def populate(self):
+        return {
+            "options": self._options,
+            "name": self.name
+        }
+
+    def validate(self, form, key, value):
+        if value not in self._options:
+            self.raise_error(key, value)
