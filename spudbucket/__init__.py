@@ -94,5 +94,7 @@ def set_methods(*methods):
 def base(func):
     @functools.wraps(func)
     def setup_form(*args, **kwargs):
-        return func(get_form(), *args, **kwargs)
+        form = get_form()
+        form.update(flask.form)
+        return func(form, *args, **kwargs)
     return setup_form
