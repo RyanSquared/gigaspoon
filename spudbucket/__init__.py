@@ -95,6 +95,6 @@ def base(func):
     @functools.wraps(func)
     def setup_form(*args, **kwargs):
         form = get_form()
-        form.update(flask.form)
+        form.update(flask.request.form)
         return func(form, *args, **kwargs)
     return setup_form
