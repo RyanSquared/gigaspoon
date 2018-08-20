@@ -16,4 +16,4 @@ install:
  - pip install -q .[dev]
 
 script:
- - python -m pytest --cov-report term --cov=spudbucket -qs
+ - python -m pytest --cov-report term --cov=gigaspoon -qs
