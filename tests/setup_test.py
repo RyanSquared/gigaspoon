@@ -1,7 +1,7 @@
 # pylint: disable-all
 import pytest
 
-import spudbucket as sb
+import gigaspoon as gs
 
 pytestmark = pytest.mark.usefixtures("app")
 
@@ -25,8 +25,8 @@ def test_setup(app):
 
 def test_modes(app):
     @app.route("/", methods=["POST"])
-    @sb.set_methods("POST")
-    @sb.base
+    @gs.set_methods("POST")
+    @gs.base
     def index(form):
         assert form.is_form_mode()
         return "success"

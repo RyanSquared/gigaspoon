@@ -1,13 +1,13 @@
 import os
 
 import flask
-import spudbucket as sb
+import gigaspoon as gs
 
 app = flask.Flask(__name__)
 app.secret_key = os.urandom(24)
 
 
-class CustomSelect(sb.v.Validator):
+class CustomSelect(gs.v.Validator):
     def __init__(self, name, options):
         self.name = name
         self._options = set(options)
@@ -47,10 +47,10 @@ html = """
 
 
 @app.route("/", methods=["GET", "POST"])
-@sb.set_methods("POST")
-@sb.validator(CustomSelect("user", ["Fred", "George"]))
-@sb.validator(sb.v.CSRF())
-@sb.base
+@gs.set_methods("POST")
+@gs.validator(CustomSelect("user", ["Fred", "George"]))
+@gs.validator(gs.v.CSRF())
+@gs.base
 def index(form):
     if form.is_form_mode():
         # Method is POST and form fields are valid
@@ -59,7 +59,7 @@ def index(form):
     return flask.render_template_string(html)
 
 
-@app.errorhandler(sb.e.FormError)
+@app.errorhandler(gs.e.FormError)
 def handle_form_error(exc):
     return flask.escape(str(exc)), 400
 

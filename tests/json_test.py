@@ -3,17 +3,17 @@ import json
 
 import pytest
 
-import spudbucket as sb
+import gigaspoon as gs
 
 pytestmark = pytest.mark.usefixtures("app")
 
 
 def test_setup(app):
-    validator = sb.v.Exists("example")
+    validator = gs.v.Exists("example")
 
     @app.route("/", methods=["POST"])
-    @sb.validator(validator)
-    @sb.base
+    @gs.validator(validator)
+    @gs.base
     def index(form):
         assert form["example"] is not None
         return ""
@@ -21,6 +21,6 @@ def test_setup(app):
     with app.test_client() as c:
         c.post("/", data=json.dumps({"example": "hello"}),
                content_type="application/json")
-        with pytest.raises(sb.e.FormKeyError):
+        with pytest.raises(gs.e.FormKeyError):
             c.post("/", data=json.dumps({"nothing": "works"}),
                    content_type="application/json")

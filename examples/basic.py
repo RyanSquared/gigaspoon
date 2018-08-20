@@ -1,4 +1,4 @@
-import spudbucket as sb
+import gigaspoon as gs
 import flask
 
 app = flask.Flask(__name__)
@@ -11,9 +11,9 @@ app = flask.Flask(__name__)
 
 
 @app.route("/", methods=["GET", "POST"])
-@sb.set_methods("POST")
-@sb.validator(sb.v.Regex("example", "[A-Za-z]+"))
-@sb.base
+@gs.set_methods("POST")
+@gs.validator(gs.v.Regex("example", "[A-Za-z]+"))
+@gs.base
 def index(form):
     if form.is_form_mode():
         # Method is POST and form fields are valid
@@ -22,7 +22,7 @@ def index(form):
         return 'hi!'
 
 
-@app.errorhandler(sb.e.FormError)
+@app.errorhandler(gs.e.FormError)
 def handle_form_error(exc):
     return str(exc), 400
 
