@@ -269,7 +269,7 @@ class SelectValidator(Validator):
 
     def populate(self):
         return {
-            "options": sorted([self._options]),
+            "options": sorted(self._options),
             "name": self.name
         }
 
