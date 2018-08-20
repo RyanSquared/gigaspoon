@@ -12,7 +12,7 @@ app = flask.Flask(__name__)
 
 @app.route("/", methods=["GET", "POST"])
 @sb.set_methods("POST")
-@sb.validator(sb.v.RegexValidator("example", "[A-Za-z]+"))
+@sb.validator(sb.v.Regex("example", "[A-Za-z]+"))
 @sb.base
 def index(form):
     if form.is_form_mode():

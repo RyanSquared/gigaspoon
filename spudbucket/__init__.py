@@ -70,7 +70,7 @@ def validator(validator_instance):
 
     :usage:
         @app.route("/")
-        @sb.validator(sb.v.CSRFValidator())
+        @sb.validator(sb.v.CSRF())
         def index():
             # Your code here
             pass

@@ -31,7 +31,7 @@ def test_base_validator_interface():
 
 def test_csrf(app):
     instance = {}
-    validator = sb.v.CSRFValidator()
+    validator = sb.v.CSRF()
 
     @app.route("/", methods=["GET", "POST"])
     @sb.validator(validator)
@@ -73,8 +73,8 @@ def test_csrf(app):
 
 
 def test_email(app):
-    no_domain_validator = sb.v.EmailValidator("email")
-    domain_validator = sb.v.EmailValidator("email", domain="example.com")
+    no_domain_validator = sb.v.Email("email")
+    domain_validator = sb.v.Email("email", domain="example.com")
 
     @app.route("/no_domain", methods=["GET", "POST"])
     @sb.validator(no_domain_validator)
@@ -123,11 +123,10 @@ def test_email(app):
 
 
 def test_ipaddr(app):
-    ipv4_validator = sb.v.IPAddressValidator("ipv4")
-    ipv6_validator = sb.v.IPAddressValidator("ipv6", address_type=["ipv6"])
+    ipv4_validator = sb.v.IPAddress("ipv4")
+    ipv6_validator = sb.v.IPAddress("ipv6", address_type=["ipv6"])
 
-    both_validator = sb.v.IPAddressValidator("both",
-                                             address_type=["ipv4", "ipv6"])
+    both_validator = sb.v.IPAddress("both", address_type=["ipv4", "ipv6"])
 
     @app.route("/ipv4", methods=["GET", "POST"])
     @sb.validator(ipv4_validator)
@@ -191,7 +190,7 @@ def test_ipaddr(app):
 
 
 def test_regex(app):
-    regex_validator = sb.v.RegexValidator("username", "^[a-z][a-z0-9]{0,29}$")
+    regex_validator = sb.v.Regex("username", "^[a-z][a-z0-9]{0,29}$")
 
     @app.route("/", methods=["GET", "POST"])
     @sb.validator(regex_validator)

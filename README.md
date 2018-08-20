@@ -40,8 +40,8 @@ app = flask.Flask(__name__)
 
 @app.route("/", methods=["GET", "POST"])
 @sb.set_methods("POST")
-@sb.validator(sb.v.RegexValidator("new", "hi"))
-@sb.validator(sb.v.RegexValidator("asdf", "[A-Za-z]+"))
+@sb.validator(sb.v.Regex("new", "hi"))
+@sb.validator(sb.v.Regex("asdf", "[A-Za-z]+"))
 @sb.base
 def index(form):
     if form.is_form_mode():
@@ -68,9 +68,9 @@ Let's walk through the decorator "chain".
 validated on `POST` requests. This function can take any amount of arguments
 and will check through all of them every request.
 
-<!-- ::TODO:: make `validator` store name, not `RegexValidator` -->
+<!-- ::TODO:: make `validator` store name, not `Regex` -->
 
-**`@sb.validator(sb.v.RegexValidator("new", "hi"))`** - This method is our
+**`@sb.validator(sb.v.Regex("new", "hi"))`** - This method is our
 first validator. It checks for the key `new` on the inconing Flask form,
 assuming the current Flask request matches the `set_methods()` (defaulting to
 "POST" if the decorator wasn't called), then checks whether the incoming

@@ -15,7 +15,7 @@ app = flask.Flask(__name__)
 
 @app.route("/", methods=["GET", "POST"])
 @sb.set_methods("POST")
-@sb.validator(sb.v.EmailValidator("email", domain="hashbang.sh"))
+@sb.validator(sb.v.Email("email", domain="hashbang.sh"))
 @sb.base
 def index(form):
     if form.is_form_mode():

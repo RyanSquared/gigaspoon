@@ -7,7 +7,7 @@ app = flask.Flask(__name__)
 app.secret_key = os.urandom(24)
 
 
-class CustomSelectValidator(sb.v.Validator):
+class CustomSelect(sb.v.Validator):
     def __init__(self, name, options):
         self.name = name
         self._options = set(options)
@@ -48,8 +48,8 @@ html = """
 
 @app.route("/", methods=["GET", "POST"])
 @sb.set_methods("POST")
-@sb.validator(CustomSelectValidator("user", ["Fred", "George"]))
-@sb.validator(sb.v.CSRFValidator())
+@sb.validator(CustomSelect("user", ["Fred", "George"]))
+@sb.validator(sb.v.CSRF())
 @sb.base
 def index(form):
     if form.is_form_mode():

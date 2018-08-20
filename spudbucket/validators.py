@@ -30,14 +30,14 @@ class Validator(object):
         raise e.ValidationError(key, value, self, **kwargs)
 
 
-class CSRFValidator(Validator):
+class CSRF(Validator):
     """
     Create a CSRF token and ensure that the token exists (and matches that
     of the form) when serving and processing forms.
 
     :usage:
         @app.route("/")
-        @sb.validator(sb.v.CSRFValidator())
+        @sb.validator(sb.v.CSRF())
         def index():
             # Your code here
             pass
@@ -67,7 +67,7 @@ class CSRFValidator(Validator):
             self.raise_error(key, value)
 
 
-class EmailValidator(Validator):
+class Email(Validator):
     """
     Checks whether an input matches a potential email. Other methods
     should be used for advanced verification. An optional `domain`
@@ -76,7 +76,7 @@ class EmailValidator(Validator):
 
     :usage:
     @app.route("/")
-    @sb.validator(sb.v.EmailValidator("email", domain="hashbang.sh"))
+    @sb.validator(sb.v.Email("email", domain="hashbang.sh"))
     @sb.base
     def index(form):
         if form.is_form_mode():
@@ -105,13 +105,13 @@ class EmailValidator(Validator):
                 message="invalid domain (%r)" % self._domain)
 
 
-class ExistsValidator(Validator):
+class Exists(Validator):
     """
     Checks whether a value exists or not.
 
     :usage:
     @app.route("/")
-    @sb.validator(sb.v.ExistsValidator("username"))
+    @sb.validator(sb.v.Exists("username"))
     @sb.base
     def index(form):
         if form.is_form_mode():
@@ -130,7 +130,7 @@ class ExistsValidator(Validator):
         pass
 
 
-class IPAddressValidator(Validator):
+class IPAddress(Validator):
     """
     Checks whether an input matches a (default) IPv4 or IPv6 address;
     either IPv4, IPv6, or both can be chosen from. The `address_type`
@@ -142,7 +142,7 @@ class IPAddressValidator(Validator):
 
     :usage:
     @app.route("/")
-    @sb.validator(sb.v.IPAddressValidator("addr"))
+    @sb.validator(sb.v.IPAddress("addr"))
     @sb.base
     def index(form):
         if form.is_form_mode():
@@ -183,13 +183,13 @@ class IPAddressValidator(Validator):
         return {"address_type": self._type}
 
 
-class LengthValidator(Validator):
+class Length(Validator):
     """
     Checks whether an input has a certain number of characters.
 
     :usage:
     @app.route("/")
-    @sb.validator(sb.v.LengthValidator("username", min=6, max=30))
+    @sb.validator(sb.v.Length("username", min=6, max=30))
     @sb.base
     def index(form):
         if form.is_form_mode():
@@ -224,7 +224,7 @@ class LengthValidator(Validator):
                     message=msg % ("long", length, ">", self._max))
 
 
-class RegexValidator(Validator):
+class Regex(Validator):
     """
     Validate input data based on a raw, uncompiled regex pattern. To match
     an exact string, text should be anchored at the beginning and end by using
@@ -236,7 +236,7 @@ class RegexValidator(Validator):
 
     :usage:
         @app.route("/")
-        @sb.validator(sb.v.RegexValidator("count", "[0-9]{1,4}"))
+        @sb.validator(sb.v.Regex("count", "[0-9]{1,4}"))
         @sb.base
         def index(form):
             if form.is_form_mode():
@@ -259,7 +259,7 @@ class RegexValidator(Validator):
             self.raise_error(key, value, message=self.pattern)
 
 
-class SelectValidator(Validator):
+class Select(Validator):
     def __init__(self, name, options):
         self.name = name
         self._options = set(options)
