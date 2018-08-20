@@ -48,9 +48,12 @@ def _validator_prototype(func, validator_instance, *args, **kwargs):
         form = get_form()
         if form.is_form_mode():
             r_form = flask.request.form
-            if r_form.get(name) is None:
-                raise e.FormKeyError(name, r_form)
             item = r_form.get(name)
+            if item is None:
+                json = flask.request.json
+                if json is None or json.get(name) is None:
+                    raise e.FormKeyError(name, r_form)
+                item = json[name]
             validator_instance.validate(form, name, item)
             form[name] = item
         if hasattr(validator_instance, "populate"):
