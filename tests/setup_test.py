@@ -1,7 +1,7 @@
 # pylint: disable-all
 import pytest
 
-import gigaspoon as gs
+import gigaspoon
 
 pytestmark = pytest.mark.usefixtures("app")
 
@@ -25,10 +25,10 @@ def test_setup(app):
 
 def test_modes(app):
     @app.route("/", methods=["POST"])
-    @gs.set_methods("POST")
-    @gs.base
+    @gigaspoon.flask.set_methods("POST")
+    @gigaspoon.flask.base
     def index(form):
-        assert form.is_form_mode()
+        assert form.is_form()
         return "success"
 
     with app.test_client() as c:

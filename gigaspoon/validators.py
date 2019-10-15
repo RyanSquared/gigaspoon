@@ -2,12 +2,8 @@
 This module provides utility validators to avoid rewriting validators that
 are not usecase specific.
 """
-import base64
-import os
 import re
 import socket
-
-import flask
 
 from . import errors as e
 
@@ -23,48 +19,11 @@ class Validator(object):
     def validate(self, form, key, value):  # pylint: disable=C0111
         raise NotImplementedError()
 
-    def populate(self):  # pylint: disable=C0111
-        pass
+    def populate(self, name):  # pylint: disable=C0111
+        return {}
 
     def raise_error(self, key, value, **kwargs):  # pylint: disable=C0111
         raise e.ValidationError(key, value, self, **kwargs)
-
-
-class CSRF(Validator):
-    """
-    Create a CSRF token and ensure that the token exists (and matches that
-    of the form) when serving and processing forms.
-
-    :usage:
-        @app.route("/")
-        @sb.validator(sb.v.CSRF())
-        def index():
-            # Your code here
-            pass
-    """
-
-    def __init__(self, name="csrf_token"):
-        self.name = name
-
-    # Generate a CSRF token from random bytes, and store in a session
-    def populate(self):
-        if flask.session.get("_csrf_token") is None:
-            token = base64.b64encode(os.urandom(24))
-            flask.session["_csrf_token"] = token.decode('ascii')
-        return {
-            "name": self.name,
-            "csrf_token": flask.session["_csrf_token"],
-            "csrf_tag": '<input type="hidden" name="%s" value="%s" />' % (
-                self.name, flask.session["_csrf_token"])
-        }
-
-    # Verify that the CSRF token passed is the same as in the session
-    def validate(self, form, key, value):
-        token = flask.session.get("_csrf_token")
-        if token is None:
-            raise e.InvalidSessionError()
-        elif value != token:
-            self.raise_error(key, value)
 
 
 class Email(Validator):
@@ -76,22 +35,23 @@ class Email(Validator):
 
     :usage:
     @app.route("/")
-    @sb.validator(sb.v.Email("email", domain="hashbang.sh"))
+    @sb.validator({
+        "email": sb.v.Email(domain="hashbang.sh"),
+    })
     @sb.base
     def index(form):
         if form.is_form_mode():
-            perform_advanced_validation(form["email"])
             do_thing(form)
             return flask.redirect(flask.url_for("index"))
         return flask.render_template("index.html")
     """
+    name = "email"
 
     # Store the domain if one is passed
-    def __init__(self, name, domain=None):
-        self.name = name
+    def __init__(self, domain=None):
         self._domain = domain
 
-    def populate(self):
+    def populate(self, name):
         return {"domain": self._domain}
 
     # Check if input data is a semi-valid email matching the domain
@@ -111,6 +71,9 @@ class Exists(Validator):
 
     :usage:
     @app.route("/")
+    @sb.validator({
+        "username": sb.v.Exists(),
+    })
     @sb.validator(sb.v.Exists("username"))
     @sb.base
     def index(form):
@@ -120,10 +83,11 @@ class Exists(Validator):
             return flask.redirect(flask.url_for("index"))
         return flask.render_template("index.html")
     """
+    name = "exists"
 
     # Store the domain if one is passed
-    def __init__(self, name):
-        self.name = name
+    def __init__(self):
+        pass
 
     # Check if the value exists
     def validate(self, form, key, value):
@@ -142,7 +106,9 @@ class IPAddress(Validator):
 
     :usage:
     @app.route("/")
-    @sb.validator(sb.v.IPAddress("addr"))
+    @sb.validator({
+        "addr": sb.v.IPAddress(),
+    })
     @sb.base
     def index(form):
         if form.is_form_mode():
@@ -151,9 +117,9 @@ class IPAddress(Validator):
         return flask.render_template_string(
             "Address families: {{ g.addr_validator.address_type }}")
     """
+    name = "ipaddress"
 
-    def __init__(self, name, address_type=["ipv4"]):  # pylint: disable=W0102
-        self.name = name
+    def __init__(self, address_type=["ipv4"]):  # pylint: disable=W0102
         self._type = address_type
 
     def validate(self, form, key, value):
@@ -179,8 +145,8 @@ class IPAddress(Validator):
         if dirty:
             self.raise_error(key, value, exception=error)
 
-    def populate(self):
-        return {"address_type": self._type}
+    def populate(self, name):
+        return {"type": self._type}
 
 
 class Length(Validator):
@@ -189,7 +155,9 @@ class Length(Validator):
 
     :usage:
     @app.route("/")
-    @sb.validator(sb.v.Length("username", min=6, max=30))
+    @sb.validator({
+        "username": sb.v.Length(min=6, max=30),
+    })
     @sb.base
     def index(form):
         if form.is_form_mode():
@@ -198,14 +166,14 @@ class Length(Validator):
             return flask.redirect(flask.url_for("index"))
         return flask.render_template("index.html")
     """
+    name = "length"
 
     # Store the domain if one is passed
-    def __init__(self, name, min=None, max=None):
-        self.name = name
+    def __init__(self, min=None, max=None):
         self._min = min
         self._max = max
 
-    def populate(self):
+    def populate(self, name):
         return {"min": self._min, "max": self._max}
 
     # Check if input data is a semi-valid email matching the domain
@@ -236,7 +204,9 @@ class Regex(Validator):
 
     :usage:
         @app.route("/")
-        @sb.validator(sb.v.Regex("count", "[0-9]{1,4}"))
+        @sb.validator({
+            "count": sb.v.Regex("[0-9]{1,4}"),
+        })
         @sb.base
         def index(form):
             if form.is_form_mode():
@@ -244,13 +214,13 @@ class Regex(Validator):
                 return flask.redirect(flask.url_for("index"))
             return flask.render_template("index.html")
     """
+    name = "regex"
 
     # Compiles and stores a pattern
-    def __init__(self, name, pattern):
-        self.name = name
+    def __init__(self, pattern):
         self.pattern = re.compile(pattern)
 
-    def populate(self):
+    def populate(self, name):
         return {"pattern": self.pattern.pattern}
 
     # Check if input data matches the pattern; otherwise, raise errors
@@ -260,17 +230,26 @@ class Regex(Validator):
 
 
 class Select(Validator):
-    def __init__(self, name, options):
-        self.name = name
+    """
+    Validate that a given input is a selection of a list of input options.
+
+    :usage:
+    @app.route("/")
+    @sb.validator({
+        "option": sb.v.Select(["apples", "oranges", "bananas"]),
+    })
+    """
+    name = "select"
+
+    def __init__(self, options):
         self._options = set(options)
 
     def __repr__(self):
         return "%r %r" % (type(self), self._options)
 
-    def populate(self):
+    def populate(self, name):
         return {
-            "options": sorted(self._options),
-            "name": self.name
+            "options": sorted(self._options)
         }
 
     def validate(self, form, key, value):
