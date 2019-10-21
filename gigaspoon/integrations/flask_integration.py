@@ -139,6 +139,24 @@ def base(func):
     return setup_form
 
 
+# Errors
+
+
+class InvalidSessionError(e.FormError):
+    """
+    This could be useful for if a session times out in the middle of
+    something. An error handler could be caught and automatically redirect
+    users to a login page if an invalid session is detected. This is an
+    empty container error with no functionality.
+    """
+
+    def __str__(self):
+        return "Invalid or missing Flask session for request"
+
+
+# Validators
+
+
 class CSRF(v.Validator):
     """
     Create a CSRF token and ensure that the token exists (and matches that
@@ -177,6 +195,6 @@ class CSRF(v.Validator):
     def validate(self, form, key, value):
         token = flask.session.get("_csrf_token")
         if token is None:
-            raise e.InvalidSessionError()
+            raise InvalidSessionError()
         elif value != token:
             self.raise_error(key, value)

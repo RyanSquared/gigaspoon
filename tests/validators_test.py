@@ -46,7 +46,7 @@ def test_csrf(app):
 
     with app.test_client() as c:
         # Check if sessions are required
-        with pytest.raises(gs.e.InvalidSessionError):
+        with pytest.raises(gs.flask.InvalidSessionError):
             c.post("/", data={VALIDATOR_NAME: ""})
 
         # Make sure data populates correctly
