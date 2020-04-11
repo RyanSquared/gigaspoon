@@ -92,6 +92,40 @@ class LambdaFilter(Validator):
 # Content validators
 
 
+class Bool(Validator):
+    """
+    Checks whether an input matches against various types of textual boolean
+    representations, not including numerics (0 or not 0), including:
+
+    True:
+
+    - yes
+    - true
+    - on
+
+    False:
+
+    - no
+    - false
+    - off
+
+    This validator is not case sensitive. The validator also converts the
+    given option (whether it's "True" or "False") into the respective type.
+    To avoid this behavior, instead use a Select() with the above options.
+    """
+    name = "bool"
+
+    def validate(self, key, value):
+        value = value.lower()
+        if value in ["yes", "true", "on"]:
+            return True
+        elif value in ["no", "false", "off"]:
+            return False
+        else:
+            self.raise_error(key, value,
+                             message="Value does not appear to be a bool")
+
+
 class Date(Validator):
     """
     Checks whether an input matches a date format string, using formats

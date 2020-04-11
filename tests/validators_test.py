@@ -144,6 +144,43 @@ def test_lambdafilter(app):
             assert err.value.value == item
 
 
+def test_bool(app):
+    bool_validator = gs.v.Bool()
+
+    @app.route("/", methods=["GET", "POST"])
+    @gs.flask.validator({"input": bool_validator})
+    @gs.flask.base
+    def index(form):
+        if form.is_form():
+            return flask.jsonify({"output": form["input"]})
+        return flask.jsonify(flask.g.input_validator)
+
+    with app.test_client() as c:
+        # Make sure data populates correctly
+        result = c.get("/")
+        items = gs.u.sanitize(bool_validator.name,
+                              bool_validator.populate("input"))
+        content = result.data.decode('ascii')
+        assert items == json.loads(content)
+        assert sorted(items.keys()) == []
+
+        # Ensure valid options work
+        for item in ["YeS", "TRUE", "on"]:
+            result = c.post("/", data={"input": item})
+            assert {"output": True} == json.loads(result.data.decode('ascii'))
+
+        # Ensure valid options work
+        for item in ["NO", "false", "Off"]:
+            result = c.post("/", data={"input": item})
+            assert {"output": False} == json.loads(result.data.decode('ascii'))
+
+        # Ensure invalid options don't work
+        for item in ["hbbhbhbnbbhbhb", "27", "0"]:
+            with pytest.raises(gs.e.ValidationError) as err:
+                c.post("/", data={"input": item})
+            assert err.value.value == item
+
+
 def test_date(app):
     use_isoformat_validator = gs.v.Date(use_isoformat=True)
     format_validator = gs.v.Date("%m/%d/%Y")  # ugly format lol
