@@ -303,3 +303,53 @@ class Select(Validator):
     def validate(self, key, value):
         if value not in self._options:
             self.raise_error(key, value)
+
+
+class Time(Validator):
+    """
+    Checks whether an input matches a time format string, using formats
+    compatible with datetime.datetime.strptime(). Unless the argument
+    `keep_time_object` is passed, the time object will be discarded, and the
+    function being validated will be allowed to perform the transformation
+    itself.  An optional `use_isoformat` will instead bypass the call to
+    datetime.datetime.strptime().time() call and instead will call
+    datetime.time.fromisoformat().
+
+    Most time formats will be compatible with ISO format. If you need to use
+    the AM/PM format, you can use the strptime format "%p"
+    """
+    name = "time"
+
+    def __init__(self, fmt=None, keep_time_object=False, use_isoformat=False):
+        self.keep_time_object = keep_time_object
+        if fmt:
+            self.format = fmt
+            self.use_isoformat = False
+        elif use_isoformat:
+            self.format = None
+            self.use_isoformat = True
+        else:
+            raise ValueError("Neither a format nor use_isoformat was used.")
+
+    def validate(self, key, value):
+        if self.use_isoformat:
+            try:
+                # try strptime to transform to date object
+                return datetime.time.fromisoformat(value)
+            except ValueError:
+                self.raise_error(
+                    key, value,
+                    message="invalid value for ISO time format")
+        elif self.format is not None:
+            try:
+                return datetime.datetime.strptime(value, self.format).time()
+            except ValueError:
+                self.raise_error(
+                    key, value,
+                    message="invalid value for format %r" % self.format)
+        else:
+            raise ValueError("Neither a format nor use_isoformat exist.")
+
+    def populate(self, name):
+        return {"fmt": self.format,
+                "use_isoformat": self.use_isoformat}

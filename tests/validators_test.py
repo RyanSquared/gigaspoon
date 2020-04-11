@@ -289,3 +289,65 @@ def test_regex(app):
             with pytest.raises(gs.e.ValidationError) as err:
                 c.post("/", data={"username": name})
             assert err.value.value == name
+
+
+def test_time(app):
+    use_isoformat_validator = gs.v.Time(use_isoformat=True)
+    format_validator = gs.v.Time("%I:%M %p")
+    keep_time_object_validator = gs.v.Time(use_isoformat=True,
+                                           keep_time_object=True)
+
+    @app.route("/use_isoformat", methods=["GET", "POST"])
+    @gs.flask.validator({"time": use_isoformat_validator})
+    @gs.flask.base
+    def no_domain(form):
+        if form.is_form():
+            return "success"
+        return flask.jsonify(flask.g.time_validator)
+
+    @app.route("/format", methods=["GET", "POST"])
+    @gs.flask.validator({"time": format_validator})
+    @gs.flask.base
+    def with_domain(form):
+        if form.is_form():
+            return "success"
+        return flask.jsonify(flask.g.time_validator)
+
+    @app.route("/keep_time_object", methods=["GET", "POST"])
+    @gs.flask.validator({"time": keep_time_object_validator})
+    @gs.flask.base
+    def keep_time_object(form):
+        if form.is_form():
+            assert isinstance(form["time"], datetime.time), "did not transform"
+            return "success"
+        return flask.jsonify(flask.g.time_validator)
+
+    with app.test_client() as c:
+        # Make sure data populates correctly
+        for endpoint in [("/use_isoformat", use_isoformat_validator),
+                         ("/format", format_validator),
+                         ("/keep_time_object", keep_time_object_validator)]:
+            result = c.get(endpoint[0])
+            items = gs.u.sanitize("time", endpoint[1].populate("time"))
+            content = result.data.decode('ascii')
+            assert items == json.loads(content)
+            assert sorted(items.keys()) == ["time_fmt", "time_use_isoformat"]
+
+        # Ensure that ISO format works
+        result = c.post("/use_isoformat", data={"time": "19:51"})
+        assert result.data == b"success"
+
+        # Ensure that ISO format can fail on bad input
+        with pytest.raises(gs.e.ValidationError):
+            result = c.post("/use_isoformat", data={"time": "7:51 PM"})
+
+        # Ensure that custom formats work
+        result = c.post("/format", data={"time": "7:51 PM"})
+        assert result.data == b"success"
+
+        # Ensure that custom formats can fail on bad input
+        with pytest.raises(gs.e.ValidationError):
+            result = c.post("/format", data={"time": "19:51"})
+
+        # Ensure that data is transformed on keep_time_object
+        result = c.post("/keep_time_object", data={"time": "19:51"})
