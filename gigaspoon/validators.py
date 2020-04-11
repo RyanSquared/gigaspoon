@@ -68,7 +68,6 @@ class LambdaFilter(Validator):
     FALSY = object()
     NONE = object()
     NOTNONE = object()
-    IS = object()
 
     def __init__(self, _lambda, matches=TRUTHY):
         self._lambda = _lambda
