@@ -113,6 +113,14 @@ def test_lambdamap(app):
 
 def test_lambdafilter(app):
     lambdafilter_validator = gs.v.LambdaFilter(lambda x: x.isprintable())
+    none_validator = gs.v.LambdaFilter(lambda x: {"a": "b"}.get(x, None),
+                                       matches=gs.v.LambdaFilter.NONE)
+    not_none_validator = gs.v.LambdaFilter(lambda x: {"a": "b"}.get(x, None),
+                                           matches=gs.v.LambdaFilter.NOTNONE)
+    falsy_validator = gs.v.LambdaFilter(lambda x: x.isdigit(),
+                                        matches=gs.v.LambdaFilter.FALSY)
+    literal_validator = gs.v.LambdaFilter(lambda x: int(x) + 1,
+                                          matches=2)
 
     @app.route("/", methods=["GET", "POST"])
     @gs.flask.validator({"input": lambdafilter_validator})
@@ -122,25 +130,57 @@ def test_lambdafilter(app):
             return "success"
         return flask.jsonify(flask.g.input_validator)
 
+    @app.route("/is-none", methods=["GET", "POST"])
+    @gs.flask.validator({"input": none_validator})
+    @gs.flask.base
+    def is_none(form):
+        if form.is_form():
+            return "success"
+        return flask.jsonify(flask.g.input_validator)
+
+    @app.route("/is-not-none", methods=["GET", "POST"])
+    @gs.flask.validator({"input": not_none_validator})
+    @gs.flask.base
+    def is_not_none(form):
+        if form.is_form():
+            return "success"
+        return flask.jsonify(flask.g.input_validator)
+
+    @app.route("/is-falsy", methods=["GET", "POST"])
+    @gs.flask.validator({"input": falsy_validator})
+    @gs.flask.base
+    def is_falsy(form):
+        if form.is_form():
+            return "success"
+        return flask.jsonify(flask.g.input_validator)
+
+    @app.route("/is-2", methods=["GET", "POST"])
+    @gs.flask.validator({"input": literal_validator})
+    @gs.flask.base
+    def is_2(form):
+        if form.is_form():
+            return "success"
+        return flask.jsonify(flask.g.input_validator)
+
     # TODO test over various other options for `matches`
 
     with app.test_client() as c:
-        # Make sure data populates correctly
-        result = c.get("/")
-        items = gs.u.sanitize(lambdafilter_validator.name,
-                              lambdafilter_validator.populate("input"))
-        content = result.data.decode('ascii')
-        assert items == json.loads(content)
-        assert sorted(items.keys()) == []
-
         # Ensure valid options work
-        for item in ["hello world!", "this is some printable text."]:
-            c.post("/", data={"input": item})
 
-        # Ensure invalid options don't work
-        for item in ["This is a bad \n example string."]:
+        for route, item in [("/", "hello world!"),  # is printable text
+                            ("/is-none", "b"),  # dict contains "a"
+                            ("/is-not-none", "a"),  # dict contains "a"
+                            ("/is-falsy", "asdf"),  # comparing is digit
+                            ("/is-2", "1")]:  # testing if + 1 == 2
+            c.post(route, data={"input": item})
+
+        for route, item in [("/", "hello,\nworld!"),  # is not printable text
+                            ("/is-none", "a"),  # dict contains "a"
+                            ("/is-not-none", "b"),  # dict contains "a"
+                            ("/is-falsy", "7"),  # comparing is digit
+                            ("/is-2", "9")]:  # testing if + 1 == 2
             with pytest.raises(gs.e.ValidationError) as err:
-                c.post("/", data={"input": item})
+                c.post(route, data={"input": item})
             assert err.value.value == item
 
 
@@ -186,6 +226,12 @@ def test_date(app):
     format_validator = gs.v.Date("%m/%d/%Y")  # ugly format lol
     keep_date_object_validator = gs.v.Date(use_isoformat=True,
                                            keep_date_object=True)
+    bad_validator = gs.v.Date(use_isoformat=True)
+    bad_validator.use_isoformat = False  # naughty naughty, raises ValueError
+
+    # Ensure that making a bad validator is a ValueError
+    with pytest.raises(ValueError):
+        gs.v.Date()
 
     @app.route("/use_isoformat", methods=["GET", "POST"])
     @gs.flask.validator({"date": use_isoformat_validator})
@@ -212,11 +258,20 @@ def test_date(app):
             return "success"
         return flask.jsonify(flask.g.date_validator)
 
+    @app.route("/bad_validator", methods=["GET", "POST"])
+    @gs.flask.validator({"date": bad_validator})
+    @gs.flask.base
+    def is_invalid_validator(form):
+        if form.is_form():
+            return "success?"
+        return flask.jsonify(flask.g.date_validator)
+
     with app.test_client() as c:
         # Make sure data populates correctly
         for endpoint in [("/use_isoformat", use_isoformat_validator),
                          ("/format", format_validator),
-                         ("/keep_date_object", keep_date_object_validator)]:
+                         ("/keep_date_object", keep_date_object_validator),
+                         ("/bad_validator", bad_validator)]:
             result = c.get(endpoint[0])
             items = gs.u.sanitize("date", endpoint[1].populate("date"))
             content = result.data.decode('ascii')
@@ -241,6 +296,11 @@ def test_date(app):
 
         # Ensure that data is transformed on keep_date_object
         result = c.post("/keep_date_object", data={"date": "2020-04-10"})
+
+        # Ensure that a corrupted validator raises a ValueError and not a
+        # validation error
+        with pytest.raises(ValueError):
+            c.post("/bad_validator", data={"date": ""})
 
 
 def test_email(app):
@@ -361,6 +421,36 @@ def test_ipaddr(app):
             assert err.value.value == ip
 
 
+def test_length(app):
+    length_validator = gs.v.Length(min=15, max=30)
+
+    @app.route("/", methods=["GET", "POST"])
+    @gs.flask.validator({"username": length_validator})
+    @gs.flask.base
+    def index(form):
+        if form.is_form():
+            return "success"
+        return flask.jsonify(flask.g.username_validator)
+
+    with app.test_client() as c:
+        # Make sure data populates correctly
+        result = c.get("/")
+        items = gs.u.sanitize(length_validator.name,
+                              length_validator.populate("fruit"))
+        content = result.data.decode('ascii')
+        assert items == json.loads(content)
+        assert sorted(items.keys()) == ["length_max", "length_min"]
+
+        for test in ["this one is fine", "so is this one?"]:
+            c.post("/", data={"username": test})
+
+        # Ensure invalid options don't work
+        for test in ["too small", "this one is way too long it will be bad"]:
+            with pytest.raises(gs.e.ValidationError) as err:
+                c.post("/", data={"username": test})
+            assert err.value.value == test
+
+
 def test_regex(app):
     regex_validator = gs.v.Regex("^[a-z][a-z0-9]{0,29}$")
 
@@ -397,6 +487,12 @@ def test_time(app):
     format_validator = gs.v.Time("%I:%M %p")
     keep_time_object_validator = gs.v.Time(use_isoformat=True,
                                            keep_time_object=True)
+    bad_validator = gs.v.Time(use_isoformat=True)
+    bad_validator.use_isoformat = False  # naughty naughty, raises ValueError
+
+    # Ensure that making a bad validator is a ValueError
+    with pytest.raises(ValueError):
+        gs.v.Time()
 
     @app.route("/use_isoformat", methods=["GET", "POST"])
     @gs.flask.validator({"time": use_isoformat_validator})
@@ -423,11 +519,20 @@ def test_time(app):
             return "success"
         return flask.jsonify(flask.g.time_validator)
 
+    @app.route("/bad_validator", methods=["GET", "POST"])
+    @gs.flask.validator({"time": bad_validator})
+    @gs.flask.base
+    def is_invalid_validator(form):
+        if form.is_form():
+            return "success?"
+        return flask.jsonify(flask.g.time_validator)
+
     with app.test_client() as c:
         # Make sure data populates correctly
         for endpoint in [("/use_isoformat", use_isoformat_validator),
                          ("/format", format_validator),
-                         ("/keep_time_object", keep_time_object_validator)]:
+                         ("/keep_time_object", keep_time_object_validator),
+                         ("/bad_validator", bad_validator)]:
             result = c.get(endpoint[0])
             items = gs.u.sanitize("time", endpoint[1].populate("time"))
             content = result.data.decode('ascii')
@@ -452,6 +557,11 @@ def test_time(app):
 
         # Ensure that data is transformed on keep_time_object
         result = c.post("/keep_time_object", data={"time": "19:51"})
+
+        # Ensure that a corrupted validator raises a ValueError and not a
+        # validation error
+        with pytest.raises(ValueError):
+            c.post("/bad_validator", data={"time": ""})
 
 
 def test_select(app):
