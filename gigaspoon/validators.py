@@ -2,13 +2,14 @@
 This module provides utility validators to avoid rewriting validators that
 are not usecase specific.
 """
-from enum import Enum, auto
 
 import datetime
 import re
 import socket
+from collections.abc import Iterable
 
 from . import errors as e
+from . import u
 
 
 class Validator(object):
@@ -27,6 +28,124 @@ class Validator(object):
 
     def raise_error(self, key, value, **kwargs):  # pylint: disable=C0111
         raise e.ValidationError(key, value, self, **kwargs)
+
+
+def wrap_validator_list(validator):
+    if isinstance(validator, Iterable):
+        return validator
+    return [validator]
+
+
+# Data structure validators
+
+class List(Validator):
+    """
+    Ensures that the value is a list. Takes a single argument which is the
+    validator (or list of validators) that will be applied to the values of
+    the list. To allow a list containing any amount of content. use the
+    Exists() validator.
+    """
+    name = "list"
+
+    def __init__(self, validator):
+        self.validator = validator
+
+    def validate(self, key, value):
+        if not isinstance(value, list):
+            self.raise_error(key, value,
+                             message="Form field is not a list")
+
+        # iterate self and apply validator to every existing field,
+        # taking transformational validators into consideration.
+        for index in range(len(value)):
+            output = u.validate_item(self.validator, f"{key}[{index}]",
+                                     value[index])
+            if output is not None:
+                value[index] = output
+
+    def populate(self, name):
+        # return all stored validators
+        validators = wrap_validator_list(self.validator)
+
+        return {"validators": [v.populate(name + "[]") for v in validators]}
+
+
+class Dict(Validator):
+    """
+    Ensures that the value is a dict. Takes a single argument which is a
+    dictionary containing form-key-to-validator mappings. The validator can be
+    either a single validator or a list of validators. The validator will be
+    applied specifically and only to the form key that it is assigned to, so
+    this value should not be used as a generic map type, where the values all
+    have the same type. See Map().
+    """
+    name = "dict"
+
+    # ::TODO:: there is no way to populate data from a Dict mapping
+    # ::TODO:: make use of the `name` field sent to `populate` ?
+
+    def __init__(self, fields):
+        self.fields = fields
+
+    def validate(self, key, value):
+        if not isinstance(value, dict):
+            self.raise_error(key, value,
+                             message="Form field is not a dict")
+
+        # iterate keys and run validators on each field of dict
+        for dict_key, validators in self.fields.items():
+            try:
+                dict_value = value[dict_key]
+            except KeyError:
+                raise e.FormKeyError(f"{key}.{dict_key}")
+            output = u.validate_item(validators, f"{key}.{dict_key}",
+                                     dict_value)
+            if output is not None:
+                value[dict_key] = output
+
+    def populate(self, name):
+        output = {}
+
+        for dict_key, validators in self.fields.items():
+            validators = wrap_validator_list(validators)
+            output[dict_key] = [v.populate(f"{name}.{dict_key}")
+                                for v in validators]
+        return output
+
+
+class Map(Validator):
+    """
+    Ensures that the value is a dict, and that a validator or a list of
+    validators is applied to every value of the dict. The validator passed to
+    the Map() validator will be applied to every value in a key-value pair.
+    For a per-key validator, see Dict().
+    """
+    name = "map"
+
+    def __init__(self, validator):
+        self.validator = validator
+
+    def validate(self, key, value):
+        if not isinstance(value, dict):
+            self.raise_error(key, value,
+                             message="Form field is not a dict")
+
+        for map_key, map_value in value.items():
+            # use the [] based method because this is a mapping and not an
+            # attribute type system
+            output = u.validate_item(self.validator, f"{key}[{map_key}]",
+                                     map_value)
+
+            if output is not None:
+                value[map_key] = output
+
+    def populate(self, name):
+        return {
+            "validators": [
+                v.populate(name + "{}")
+                for v in wrap_validator_list(self.validator)
+            ]
+        }
 
 
 # Meta-validators

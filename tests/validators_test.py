@@ -80,6 +80,139 @@ def test_csrf(app):
         assert err.value.key == VALIDATOR_NAME
 
 
+def test_list(app):
+    list_validator = gs.v.List(gs.v.Length(min=2, max=4))
+    many_list_validator = gs.v.List([gs.v.Length(min=2, max=7),
+                                     gs.v.Bool()])
+
+    @app.route("/", methods=["GET", "POST"])
+    @gs.flask.validator({"input": list_validator})
+    @gs.flask.base
+    def index(form):
+        if form.is_form():
+            return "success"
+        return flask.jsonify(flask.g.input_validator)
+
+    @app.route("/many", methods=["GET", "POST"])
+    @gs.flask.validator({"input": many_list_validator})
+    @gs.flask.base
+    def many(form):
+        if form.is_form():
+            return "success"
+        return flask.jsonify(flask.g.input_validator)
+
+    with app.test_client() as c:
+        # Make sure data populates correctly
+        result = c.get("/")
+        items = gs.u.sanitize(list_validator.name,
+                              list_validator.populate("input"))
+        content = result.data.decode('ascii')
+        assert items == json.loads(content)
+        assert sorted(items.keys()) == ["list_validators"]
+
+        result = c.get("/many")
+        items = gs.u.sanitize(many_list_validator.name,
+                              many_list_validator.populate("input"))
+        content = result.data.decode('ascii')
+        assert items == json.loads(content)
+        assert sorted(items.keys()) == ["list_validators"]
+
+        # Ensure valid options work
+        c.post("/", data={"input.1": "test"})
+        c.post("/many", data={"input.1": "yes", "input.2": "false"})
+
+        # Ensure invalid fields don't work
+        for field in ["input", "input.dict_entry"]:
+            with pytest.raises(gs.e.ValidationError):
+                c.post("/", data={field: "test"})
+
+        # Ensure invalid values don't work
+        with pytest.raises(gs.e.ValidationError):
+            c.post("/", data={"input.1": "Testing"})
+
+
+def test_dict(app):
+    dict_validator = gs.v.Dict({"test_key": gs.v.Length(min=2, max=4),
+                                "test_mult": [gs.v.Length(min=4),
+                                              gs.v.Bool()],
+                                "test_list": gs.v.List([gs.v.Length(max=5),
+                                                        gs.v.Bool()])})
+
+    @app.route("/", methods=["GET", "POST"])
+    @gs.flask.validator({"input": dict_validator})
+    @gs.flask.base
+    def index(form):
+        if form.is_form():
+            return "success"
+        return flask.jsonify(flask.g.input_validator)
+
+    with app.test_client() as c:
+        # Make sure data populates correctly
+        result = c.get("/")
+        items = gs.u.sanitize(dict_validator.name,
+                              dict_validator.populate("input"))
+        content = result.data.decode('ascii')
+        assert items == json.loads(content)
+        # TODO populate the dict_validators field and do comparison on the
+        # values put into it
+        assert sorted(items.keys()) == ["dict_test_key", "dict_test_list",
+                                        "dict_test_mult"]
+
+        # Ensure valid options work
+        c.post("/", data={"input.test_key": "test",
+                          "input.test_mult": "false",
+                          "input.test_list.1": "yes"})
+
+        # Ensure invalid types don't work
+        for field in ["input", "input.1"]:
+            with pytest.raises(gs.e.ValidationError):
+                c.post("/", data={field: "test"})
+
+        # Ensure invalid fields don't work
+        with pytest.raises(gs.e.FormKeyError):
+            c.post("/", data={"input.testing": "test"})
+
+        # Ensure invalid values don't work
+        with pytest.raises(gs.e.ValidationError):
+            c.post("/", data={"input.test_key": "Testing",
+                              "input.test_mult": "asdfpotato",
+                              "input.test_list.1": "not a bool"})
+
+
+def test_map(app):
+    map_validator = gs.v.Map(gs.v.Length(min=2, max=10))
+
+    @app.route("/", methods=["GET", "POST"])
+    @gs.flask.validator({"input": map_validator})
+    @gs.flask.base
+    def index(form):
+        if form.is_form():
+            return "success"
+        return flask.jsonify(flask.g.input_validator)
+
+    with app.test_client() as c:
+        # Make sure data populates correctly
+        result = c.get("/")
+        items = gs.u.sanitize(map_validator.name,
+                              map_validator.populate("input"))
+        content = result.data.decode('ascii')
+        assert items == json.loads(content)
+        assert sorted(items.keys()) == ["map_validators"]
+
+        # Ensure valid options work
+        c.post("/", data={"input.testing": "test"})
+        c.post("/many", data={"input.hello": "world", "input.haudi": "tests!"})
+
+        # Ensure invalid fields don't work
+        for field in ["input", "input.1"]:
+            with pytest.raises(gs.e.ValidationError):
+                c.post("/", data={field: "test"})
+
+        # Ensure invalid values don't work
+        with pytest.raises(gs.e.ValidationError):
+            c.post("/", data={"input.key": "this is a long string"})
+
+
 def test_lambdamap(app):
     lambdamap_validator = gs.v.LambdaMap(lambda x: int(x) * 2)
 
@@ -565,7 +698,7 @@ def test_time(app):
 
 
 def test_select(app):
-    options = ["apples", "oranges", "bananas"]
+    options = ["apples", "bananas", "oranges"]
     select_validator = gs.v.Select(options)
 
     @app.route("/", methods=["GET", "POST"])
@@ -584,6 +717,7 @@ def test_select(app):
         content = result.data.decode('ascii')
         assert items == json.loads(content)
         assert sorted(items.keys()) == ["select_options"]
+        assert sorted(items["select_options"]) == options
 
         # Ensure valid options work
         for fruit in options:
