@@ -12,6 +12,106 @@ from .. import errors as e
 from .. import u
 
 
+def process_flat_form(input_form):
+    """
+    Function adapted from https://github.com/marrow/WebCore
+
+    Copyright © 2006-2019 Alice Bevan-McGregor and contributors.
+
+    Permission is hereby granted, free of charge, to any person obtaining a
+    copy of this software and associated documentation files (the “Software”),
+    to deal in the Software without restriction, including without limitation
+    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+    and/or sell copies of the Software, and to permit persons to whom the
+    Software is furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in
+    all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL
+    THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+    DEALINGS IN THE SOFTWARE.
+
+    Apply a flat namespace transformation to recreate (in some respects) a
+    rich structure.
+
+    This applies several transformations, which may be nested:
+
+    `foo` (singular): define a simple value named `foo`
+    `foo` (repeated): define a simple value for placement in an array named
+                      `foo`
+    `foo[]`: define a simple value for placement in an array, even if there is
+             only one
+    `foo.<id>`: define a simple value to place in the `foo` array at the
+                identified index
+
+    By nesting, you may define deeper, more complex structures:
+
+    `foo.bar`: define a value for the named element `bar` of the `foo` dict
+    `foo.<id>.bar`: define a `bar` dictionary element on the array element
+                    marked by that ID
+
+    References to `<id>` represent numeric "attributes", which makes the parent
+    reference be treated as an array, not a dictionary. Exact indexes might not
+    be able to be preserved if there are voids; Python lists are not sparse.
+
+    No validation of values is performed.
+    """
+
+    ordered_arrays = []
+    output = {}
+
+    # Process arguments one at a time and apply them to the output passed in.
+
+    for name, value in input_form.items():
+        container = output
+
+        if '.' in name:
+            parts = name.split('.')
+            name = name.rpartition('.')[2]
+
+            for target, following in zip(parts[:-1], parts[1:]):
+                if following.isnumeric():  # Prepare any use of numeric IDs.
+                    container.setdefault(target, [{}])
+                    if container[target] not in ordered_arrays:
+                        ordered_arrays.append(container[target])
+                    container = container[target][0]
+                    continue
+
+                container = container.setdefault(target, {})
+
+        if name.endswith('[]'):  # `foo[]` or `foo.bar[]` etc.
+            name = name[:-2]
+            container.setdefault(name, [])
+            container[name].append(value)
+            continue
+
+        # trailing identifiers, `foo.<id>`
+        if name.isnumeric() and container is not output:
+            container[int(name)] = value
+            continue
+
+        if name in container:
+            if not isinstance(container[name], list):
+                container[name] = [container[name]]
+
+            container[name].append(value)
+            continue
+
+        container[name] = value
+
+    for container in ordered_arrays:
+        elements = container[0]
+        del container[:]
+        container.extend(value for name, value in sorted(elements.items()))
+
+    return output
+
+
 class Form(dict):
     """Dictionary with extra utilities for checking Flask form status
 
@@ -79,7 +179,7 @@ def _validator_prototype(func: Callable, validators, *args, **kwargs):
     def handle_func(*args, **kwargs):
         form = get_form()
         if form.is_form():
-            request_form = flask.request.form
+            request_form = process_flat_form(flask.request.form)
 
             # Iterate through all fields
             for name, validator_list in validators.items():
