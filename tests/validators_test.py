@@ -351,3 +351,35 @@ def test_time(app):
 
         # Ensure that data is transformed on keep_time_object
         result = c.post("/keep_time_object", data={"time": "19:51"})
+
+
+def test_select(app):
+    options = ["apples", "oranges", "bananas"]
+    select_validator = gs.v.Select(options)
+
+    @app.route("/", methods=["GET", "POST"])
+    @gs.flask.validator({"fruit": select_validator})
+    @gs.flask.base
+    def index(form):
+        if form.is_form():
+            return "success"
+        return flask.jsonify(flask.g.fruit_validator)
+
+    with app.test_client() as c:
+        # Make sure data populates correctly
+        result = c.get("/")
+        items = gs.u.sanitize(select_validator.name,
+                              select_validator.populate("fruit"))
+        content = result.data.decode('ascii')
+        assert items == json.loads(content)
+        assert sorted(items.keys()) == ["select_options"]
+
+        # Ensure valid options work
+        for fruit in options:
+            c.post("/", data={"fruit": fruit})
+
+        # Ensure invalid options don't work
+        for fruit in ["durian", "pineapple", "tomato"]:  # i guess we're picky
+            with pytest.raises(gs.e.ValidationError) as err:
+                c.post("/", data={"fruit": fruit})
+            assert err.value.value == fruit
