@@ -80,6 +80,70 @@ def test_csrf(app):
         assert err.value.key == VALIDATOR_NAME
 
 
+def test_lambdamap(app):
+    lambdamap_validator = gs.v.LambdaMap(lambda x: int(x) * 2)
+
+    @app.route("/", methods=["GET", "POST"])
+    @gs.flask.validator({"input": lambdamap_validator})
+    @gs.flask.base
+    def index(form):
+        if form.is_form():
+            return "success"
+        return flask.jsonify(flask.g.input_validator)
+
+    with app.test_client() as c:
+        # Make sure data populates correctly
+        result = c.get("/")
+        items = gs.u.sanitize(lambdamap_validator.name,
+                              lambdamap_validator.populate("input"))
+        content = result.data.decode('ascii')
+        assert items == json.loads(content)
+        assert sorted(items.keys()) == []
+
+        # Ensure valid options work
+        for item in ["1", "5", "27"]:
+            c.post("/", data={"input": item})
+
+        # Ensure invalid options don't work
+        for item in ["asdf", "these are words and not numbers"]:
+            with pytest.raises(gs.e.ValidationError) as err:
+                c.post("/", data={"input": item})
+            assert err.value.value == item
+
+
+def test_lambdafilter(app):
+    lambdafilter_validator = gs.v.LambdaFilter(lambda x: x.isprintable())
+
+    @app.route("/", methods=["GET", "POST"])
+    @gs.flask.validator({"input": lambdafilter_validator})
+    @gs.flask.base
+    def index(form):
+        if form.is_form():
+            return "success"
+        return flask.jsonify(flask.g.input_validator)
+
+    # TODO test over various other options for `matches`
+
+    with app.test_client() as c:
+        # Make sure data populates correctly
+        result = c.get("/")
+        items = gs.u.sanitize(lambdafilter_validator.name,
+                              lambdafilter_validator.populate("input"))
+        content = result.data.decode('ascii')
+        assert items == json.loads(content)
+        assert sorted(items.keys()) == []
+
+        # Ensure valid options work
+        for item in ["hello world!", "this is some printable text."]:
+            c.post("/", data={"input": item})
+
+        # Ensure invalid options don't work
+        for item in ["This is a bad \n example string."]:
+            with pytest.raises(gs.e.ValidationError) as err:
+                c.post("/", data={"input": item})
+            assert err.value.value == item
+
+
 def test_date(app):
     use_isoformat_validator = gs.v.Date(use_isoformat=True)
     format_validator = gs.v.Date("%m/%d/%Y")  # ugly format lol

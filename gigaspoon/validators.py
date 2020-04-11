@@ -2,6 +2,8 @@
 This module provides utility validators to avoid rewriting validators that
 are not usecase specific.
 """
+from enum import Enum, auto
+
 import datetime
 import re
 import socket
@@ -25,6 +27,69 @@ class Validator(object):
 
     def raise_error(self, key, value, **kwargs):  # pylint: disable=C0111
         raise e.ValidationError(key, value, self, **kwargs)
+
+
+# Meta-validators
+
+
+class LambdaMap(Validator):
+    """
+    Runs a lambda against a given input, checking for errors, and replaces the
+    input value with the value returned from the lambda.
+
+    Has no populatable data.
+    """
+    name = "lambdamap"
+
+    def __init__(self, _lambda):
+        self._lambda = _lambda
+
+    def validate(self, key, value):
+        try:
+            return self._lambda(value)
+        except Exception as e:
+            self.raise_error(key, value, exception=e)
+
+
+class LambdaFilter(Validator):
+    """
+    Runs a lambda against a given input and asserts that the output of the
+    called lambda is truthy. To compare for a specific value, (such as
+    False), use the `matches` argument. To specifically match against
+    truthy or falsy, set matches=LambdaFilter.TRUTHY or LambdaFilter.FALSY.
+    To match against None, set matches=LambdaFilter.NONE. To match against
+    "not None", set matches=LambdaFilter.NOTNONE.
+
+    Has no populatable data.
+    """
+    name = "lambdafilter"
+
+    TRUTHY = object()
+    FALSY = object()
+    NONE = object()
+    NOTNONE = object()
+    IS = object()
+
+    def __init__(self, _lambda, matches=TRUTHY):
+        self._lambda = _lambda
+        self._matches = matches
+
+    def validate(self, key, value):
+        if self._matches is self.NONE and self._lambda(value) is None:
+            return
+        if self._matches is self.NOTNONE and self._lambda(value) is not None:
+            return
+        if self._matches is self.TRUTHY and self._lambda(value):
+            return
+        elif self._matches is self.FALSY and not self._lambda(value):
+            return
+        elif self._lambda(value) == self._matches:
+            return
+        self.raise_error(key, value,
+                         message="failed to match %r" % self._matches)
+
+
+# Content validators
 
 
 class Date(Validator):
@@ -291,9 +356,6 @@ class Select(Validator):
 
     def __init__(self, options):
         self._options = set(options)
-
-    def __repr__(self):
-        return "%r %r" % (type(self), self._options)
 
     def populate(self, name):
         return {
