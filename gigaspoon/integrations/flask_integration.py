@@ -189,7 +189,7 @@ def _validator_prototype(func: Callable, validators, *args, **kwargs):
                 if item is None:
                     json = flask.request.json
                     if json is None or json.get(name) is None:
-                        raise e.FormKeyError(name, request_form)
+                        raise e.FormKeyError(name)
                     item = json[name]
 
                 # Data is valid, can put into our local form

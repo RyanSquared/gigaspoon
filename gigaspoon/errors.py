@@ -14,12 +14,11 @@ class FormKeyError(FormError):
     does not exist.
     """
 
-    def __init__(self, key, form):
+    def __init__(self, key):
         self.key = key
-        self._form = form
 
     def __str__(self):
-        return "Expected key %r for form %r" % (self.key, self._form)
+        return "Expected key %r for form" % self.key
 
 
 class ValidationError(FormError):
