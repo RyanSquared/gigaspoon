@@ -16,7 +16,7 @@ def test_base_validator_interface():
 
     # Test `validate` raises NotImplementedError
     with pytest.raises(NotImplementedError):
-        validator.validate(0, 0, 0)
+        validator.validate(0, 0)
 
     # Test dummy `populate` returns empty dict
     # Fallback for validators that don't provide populable data

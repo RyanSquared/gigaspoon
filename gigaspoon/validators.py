@@ -16,7 +16,7 @@ class Validator(object):
     example.
     """
 
-    def validate(self, form, key, value):  # pylint: disable=C0111
+    def validate(self, key, value):  # pylint: disable=C0111
         raise NotImplementedError()
 
     def populate(self, name):  # pylint: disable=C0111
@@ -55,7 +55,7 @@ class Email(Validator):
         return {"domain": self._domain}
 
     # Check if input data is a semi-valid email matching the domain
-    def validate(self, form, key, value):
+    def validate(self, key, value):
         first, _, last = value.rpartition("@")
         if "@" in first or not first or not last:
             self.raise_error(key, value, message="invalid email")
@@ -90,7 +90,7 @@ class Exists(Validator):
         pass
 
     # Check if the value exists
-    def validate(self, form, key, value):
+    def validate(self, key, value):
         pass
 
 
@@ -122,7 +122,7 @@ class IPAddress(Validator):
     def __init__(self, address_type=["ipv4"]):  # pylint: disable=W0102
         self._type = address_type
 
-    def validate(self, form, key, value):
+    def validate(self, key, value):
         dirty = True
         error = None
         if "ipv4" in self._type:
@@ -177,7 +177,7 @@ class Length(Validator):
         return {"min": self._min, "max": self._max}
 
     # Check if input data is a semi-valid email matching the domain
-    def validate(self, form, key, value):
+    def validate(self, key, value):
         length = len(value)
         msg = "value too %s (%s %s %s)"
         if self._min is not None:
@@ -224,7 +224,7 @@ class Regex(Validator):
         return {"pattern": self.pattern.pattern}
 
     # Check if input data matches the pattern; otherwise, raise errors
-    def validate(self, form, key, value):
+    def validate(self, key, value):
         if not self.pattern.match(value):
             self.raise_error(key, value, message=self.pattern)
 
@@ -252,6 +252,6 @@ class Select(Validator):
             "options": sorted(self._options)
         }
 
-    def validate(self, form, key, value):
+    def validate(self, key, value):
         if value not in self._options:
             self.raise_error(key, value)

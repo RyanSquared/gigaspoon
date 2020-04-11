@@ -46,6 +46,26 @@ def get_form(methods: List[str] = ["POST"]):
     return form
 
 
+def validate_item(validator_list, name, item):
+    """
+    Validate an item across a set of validators. A name should be passed
+    through representing the entire search path of the object, to make
+    debugging client issues easier. For example, a value of "y" in a dict "x"
+    should have a name value of "x.y".
+    """
+    if not isinstance(validator_list, Iterable):
+        validator_list = [validator_list]
+
+    # Iterate through all validators
+    for validator in validator_list:
+        # Check to make sure input is valid
+        opt_value = validator.validate(name, item)
+        if opt_value is not None:
+            item = opt_value
+
+    return item
+
+
 # Prototype decorator for validating incoming requests
 def _validator_prototype(func: Callable, validators, *args, **kwargs):
     for name, validator_list in validators.items():
@@ -72,16 +92,8 @@ def _validator_prototype(func: Callable, validators, *args, **kwargs):
                         raise e.FormKeyError(name, request_form)
                     item = json[name]
 
-                if not isinstance(validator_list, Iterable):
-                    validator_list = [validator_list]
-
-                # Iterate through all validators
-                for validator in validator_list:
-                    # Check to make sure input is valid
-                    validator.validate(form, name, item)
-
                 # Data is valid, can put into our local form
-                form[name] = item
+                form[name] = validate_item(validator_list, name, item)
         else:
             for name, validator_list in validators.items():
                 for validator in validator_list:
@@ -192,7 +204,7 @@ class CSRF(v.Validator):
         }
 
     # Verify that the CSRF token passed is the same as in the session
-    def validate(self, form, key, value):
+    def validate(self, key, value):
         token = flask.session.get("_csrf_token")
         if token is None:
             raise InvalidSessionError()
