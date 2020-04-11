@@ -1,4 +1,8 @@
 # pylint: disable-all
+# Required for testing validators
+import datetime
+
+# Required for parsing returned inputs
 import json
 
 import flask
@@ -74,6 +78,68 @@ def test_csrf(app):
             c.post("/")
 
         assert err.value.key == VALIDATOR_NAME
+
+
+def test_date(app):
+    use_isoformat_validator = gs.v.Date(use_isoformat=True)
+    format_validator = gs.v.Date("%m/%d/%Y")  # ugly format lol
+    keep_date_object_validator = gs.v.Date(use_isoformat=True,
+                                           keep_date_object=True)
+
+    @app.route("/use_isoformat", methods=["GET", "POST"])
+    @gs.flask.validator({"date": use_isoformat_validator})
+    @gs.flask.base
+    def no_domain(form):
+        if form.is_form():
+            return "success"
+        return flask.jsonify(flask.g.date_validator)
+
+    @app.route("/format", methods=["GET", "POST"])
+    @gs.flask.validator({"date": format_validator})
+    @gs.flask.base
+    def with_domain(form):
+        if form.is_form():
+            return "success"
+        return flask.jsonify(flask.g.date_validator)
+
+    @app.route("/keep_date_object", methods=["GET", "POST"])
+    @gs.flask.validator({"date": keep_date_object_validator})
+    @gs.flask.base
+    def keep_date_object(form):
+        if form.is_form():
+            assert isinstance(form["date"], datetime.date), "did not transform"
+            return "success"
+        return flask.jsonify(flask.g.date_validator)
+
+    with app.test_client() as c:
+        # Make sure data populates correctly
+        for endpoint in [("/use_isoformat", use_isoformat_validator),
+                         ("/format", format_validator),
+                         ("/keep_date_object", keep_date_object_validator)]:
+            result = c.get(endpoint[0])
+            items = gs.u.sanitize("date", endpoint[1].populate("date"))
+            content = result.data.decode('ascii')
+            assert items == json.loads(content)
+            assert sorted(items.keys()) == ["date_fmt", "date_use_isoformat"]
+
+        # Ensure that ISO format works
+        result = c.post("/use_isoformat", data={"date": "2020-04-10"})
+        assert result.data == b"success"
+
+        # Ensure that ISO format can fail on bad input
+        with pytest.raises(gs.e.ValidationError):
+            result = c.post("/use_isoformat", data={"date": "04/10/2020"})
+
+        # Ensure that custom formats work
+        result = c.post("/format", data={"date": "04/10/2020"})
+        assert result.data == b"success"
+
+        # Ensure that custom formats can fail on bad input
+        with pytest.raises(gs.e.ValidationError):
+            result = c.post("/format", data={"date": "2020-04-10"})
+
+        # Ensure that data is transformed on keep_date_object
+        result = c.post("/keep_date_object", data={"date": "2020-04-10"})
 
 
 def test_email(app):

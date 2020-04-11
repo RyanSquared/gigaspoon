@@ -2,6 +2,7 @@
 This module provides utility validators to avoid rewriting validators that
 are not usecase specific.
 """
+import datetime
 import re
 import socket
 
@@ -24,6 +25,53 @@ class Validator(object):
 
     def raise_error(self, key, value, **kwargs):  # pylint: disable=C0111
         raise e.ValidationError(key, value, self, **kwargs)
+
+
+class Date(Validator):
+    """
+    Checks whether an input matches a date format string, using formats
+    compatible with datetime.datetime.strptime(). Unless the argument
+    `keep_date_object` is passed, the date object will be discarded, and the
+    function being validated will be allowed to perform the transformation
+    itself.  An optional `use_isoformat` will instead bypass the call to
+    datetime.datetime.strptime().date() call and instead will call
+    datetime.date.fromisoformat().
+    """
+    name = "date"
+
+    def __init__(self, fmt=None, keep_date_object=False, use_isoformat=False):
+        self.keep_date_object = keep_date_object
+        if fmt:
+            self.format = fmt
+            self.use_isoformat = False
+        elif use_isoformat:
+            self.format = None
+            self.use_isoformat = True
+        else:
+            raise ValueError("Neither a format nor use_isoformat was used.")
+
+    def validate(self, key, value):
+        if self.use_isoformat:
+            try:
+                # try strptime to transform to date object
+                return datetime.date.fromisoformat(value)
+            except ValueError:
+                self.raise_error(
+                    key, value,
+                    message="invalid value for ISO date format")
+        elif self.format is not None:
+            try:
+                return datetime.datetime.strptime(value, self.format).date()
+            except ValueError:
+                self.raise_error(
+                    key, value,
+                    message="invalid value for format %r" % self.format)
+        else:
+            raise ValueError("Neither a format nor use_isoformat exist.")
+
+    def populate(self, name):
+        return {"fmt": self.format,
+                "use_isoformat": self.use_isoformat}
 
 
 class Email(Validator):
