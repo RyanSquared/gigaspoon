@@ -72,7 +72,7 @@ class List(Validator):
 
 class Dict(Validator):
     """
-    Ensures that the value is a dict. Takes a single argument which is a
+    Ensures that the value is a dict. Takes a variable kwargs which is a
     dictionary containing form-key-to-validator mappings. The validator can be
     either a single validator or a list of validators. The validator will be
     applied specifically and only to the form key that it is assigned to, so
@@ -84,7 +84,7 @@ class Dict(Validator):
     # ::TODO:: there is no way to populate data from a Dict mapping
     # ::TODO:: make use of the `name` field sent to `populate` ?
 
-    def __init__(self, fields):
+    def __init__(self, **fields):
         self.fields = fields
 
     def validate(self, key, value):

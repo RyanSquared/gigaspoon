@@ -132,11 +132,10 @@ def test_list(app):
 
 
 def test_dict(app):
-    dict_validator = gs.v.Dict({"test_key": gs.v.Length(min=2, max=4),
-                                "test_mult": [gs.v.Length(min=4),
-                                              gs.v.Bool()],
-                                "test_list": gs.v.List([gs.v.Length(max=5),
-                                                        gs.v.Bool()])})
+    dict_validator = gs.v.Dict(test_key=gs.v.Length(min=2, max=4),
+                               test_mult=[gs.v.Length(min=4), gs.v.Bool()],
+                               test_list=gs.v.List([gs.v.Length(max=5),
+                                                    gs.v.Bool()]))
 
     @app.route("/", methods=["GET", "POST"])
     @gs.flask.validator({"input": dict_validator})
